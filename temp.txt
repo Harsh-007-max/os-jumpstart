@@ -1,0 +1,149 @@
+harsh@fedora:~/Desktop/installer$ sudo ./kesl.sh --install
+
+============================================
+   Installing Kaspersky Endpoint Security
+============================================
+
+==> Looking for RPM files in current directory...
+ ✓  Found Core: kesl-12.3.0-1162.x86_64.rpm
+ ✓  Found GUI:  kesl-gui-12.3.0-1162.x86_64.rpm
+==> Installing packages via DNF...
+Updating and loading repositories:
+Repositories loaded.
+Package                             Arch      Version                             Repository              Size
+Installing:
+ kesl                               x86_64    12.3.0-1162                         @commandline       377.5 MiB
+ kesl-gui                           x86_64    12.3.0-1162                         @commandline        91.4 MiB
+
+Transaction Summary:
+ Installing:         2 packages
+
+Total size of inbound packages is 179 MiB. Need to download 0 B.
+After this operation, 469 MiB extra will be used (install 469 MiB, remove 0 B).
+Running transaction
+[1/4] Verify package files                                            100% |   3.0   B/s |   2.0   B |  00m01s
+[2/4] Prepare transaction                                             100% |   5.0   B/s |   2.0   B |  00m00s
+[3/4] Installing kesl-0:12.3.0-1162.x86_64                            100% |  23.4 MiB/s | 377.6 MiB |  00m16s
+>>> Running %post scriptlet: kesl-0:12.3.0-1162.x86_64
+>>> Finished %post scriptlet: kesl-0:12.3.0-1162.x86_64
+>>> Scriptlet output:
+>>>
+>>> 'Kaspersky Endpoint Security 12.3 for Linux' application is installed
+>>> successfully. Initial configuration is needed
+>>>
+>>>
+>>> configuration of the application
+>>>
+>>>
+[4/4] Installing kesl-gui-0:12.3.0-1162.x86_64                        100% |  21.6 MiB/s |  91.5 MiB |  00m04s
+Warning: skipped OpenPGP checks for 2 packages from repository: @commandline
+Complete!
+ ✓  RPMs installed successfully.
+
+=============================
+   Kaspersky Configuration
+=============================
+
+ !  IMPORTANT: When asked to 'configure SELinux automatically', answer NO (n).
+ !  We will configure it manually to avoid Fedora-specific errors.
+Press Enter to start configuration...
+
+
+Kaspersky Endpoint Security 12.3 for Linux
+
+Specifying the application usage mode
+
+You can use Kaspersky Endpoint Security for Linux in Standard mode to
+protect workstations and servers running Linux operating systems or in
+Light Agent mode to protect virtual machines running Linux guest operating
+systems. Do you want to use the application in Light Agent mode? [n]: n
+
+Setting up the Anti-Malware Service default locale
+
+The specified locale will be used to show user agreements in this script
+and send events to Kaspersky Security Center.
+List of available locales:
+- en_US.UTF-8
+- de_DE.UTF-8
+- fr_FR.UTF-8
+- ja_JP.UTF-8
+- ru_RU.UTF-8
+- zh_CN.UTF-8
+- zh_TW.UTF-8
+[en_US.UTF-8]:
+
+Anti-Malware Service default locale is changed to 'en_US.UTF-8'.
+Service will be restarted if it is already running.
+
+Accepting the End User License Agreement (EULA) and Privacy Policy
+
+Please confirm that you have fully read, understand, and accept the End
+User License Agreement (EULA) and Privacy Policy to continue.
+
+NOTE: To quit the EULA and Privacy Policy viewer, press the Q key.
+
+Press ENTER to display the EULA and Privacy Policy:
+
+Read EULA and Privacy Policy from file '/opt/kaspersky/kesl/doc/license.en'
+(utf-8) if it cannot be read here.
+
+I confirm that I have fully read, understand, and accept the terms and
+conditions of this End User License Agreement [y/n]: y
+
+I am aware and agree that my data will be handled and transmitted
+(including to third countries) as described in the Privacy Policy. I
+confirm that I have fully read and understand the Privacy Policy [y/n]: y
+
+Configuring KSN
+
+I confirm that I have fully read, understand, and accept the terms and
+conditions of the Kaspersky Security Network Statement (KSN Statement is
+available here: '/opt/kaspersky/kesl/doc/ksn_license.en') [y/n]: y
+
+Granting the Administrator role
+
+Only users with the Administrator role have full access to the program
+management by command line and GUI.
+
+Specify user to grant the 'admin' role to (leave empty to skip):
+
+Configuring the system event interception mechanism
+
+Checking if fanotify is available...
+
+Using fanotify interceptor
+
+To intercept system events, the application can use an updatable kernel
+module or the fanotify technology. Do you want to use an updatable kernel
+module? [n]: y
+
+If the updatable kernel module is not available, you can switch to fanotify
+or proceed without intercepting system events (the protection level is
+reduced). Switch to fanotify? [y]: y
+
+To switch the application to using an updatable kernel module, starting the
+module requires the application to be restarted automatically or manually.
+Allow automatic application restart to start the module? [n]: y
+
+System event interception mechanism successfully configured
+
+You can select a different system event interception mechanism after the
+installation is complete and the application is running
+
+SELinux configuration
+
+Do you want to configure SELinux automatically? [y]: y
+
+Attempting to compile module 'kesl'
+
+Attempting to install module 'kesl'
+
+Attempting to enable module 'kesl'
+
+Labeling application executables ...
+
+Application executables were not labeled. Configure SELinux context
+manually if it is active
+
+Error: An error occurred. See details in log
+/var/log/kaspersky/kesl/kesl_launcher.log

@@ -1,0 +1,5 @@
+# KESL files
+*.zip
+kesl*.rpm
+kesl*.tar.gz
+

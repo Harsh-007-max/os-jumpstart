@@ -1,5 +1,4 @@
 #!/bin/bash
-
 # Master Setup Script for Fedora 43 SDE Environment
 # Usage: ./main.sh
 
@@ -9,7 +8,7 @@ source "$SCRIPT_DIR/shared_functions.sh"
 
 main() {
   print_title "Starting Fedora 43 System Setup"
-  
+
   # 2. Sudo Keep-Alive
   # Ask for password once, then refresh the timestamp in the background
   # so the script doesn't pause for passwords later.
@@ -29,6 +28,7 @@ main() {
     "install_utils.sh"
     "install_apps.sh"
     "install_devtools.sh"
+    "install_db.sh"
     "optimize_system.sh"
     "setswap_fedora.sh"
     "setup_git.sh"
@@ -38,11 +38,11 @@ main() {
   # 4. Execution Loop
   for script in "${scripts_to_run[@]}"; do
     local script_path="$SCRIPT_DIR/$script"
-    
+
     if [ -f "$script_path" ]; then
       print_title "Executing ${script}..."
       chmod +x "$script_path"
-      
+
       # Run the script
       if [[ "$script" == "setswap_fedora.sh" ]]; then
         # Explicit sudo for swap script with arguments
@@ -53,7 +53,7 @@ main() {
         # Run standard script
         "$script_path"
       fi
-      
+
       # Check for failure (Exit immediately if a core script fails)
       if [ $? -ne 0 ]; then
         error "Script ${script} failed! Aborting."
@@ -66,7 +66,7 @@ main() {
     sleep 1
   done
 
-  print_title "Fedora 43 System Setup Complete!" 
+  print_title "Fedora 43 System Setup Complete!"
   info "Please reboot your system for all changes (Docker group, Zsh, Swap) to take effect."
 }
 

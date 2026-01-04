@@ -2,58 +2,76 @@
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/shared_functions.sh"
+#spate maar
+# --- STATUS HELPERS ---
+STAT_DNF="/tmp/status_dnf"
+STAT_FLATPAK="/tmp/status_flatpak"
+STAT_IDES="/tmp/status_ides"
 
-# --- GENERIC HELPER: Install any App from Tarball ---
-# Usage: install_tar_app "AppName" "URL" "InstallPath" "RelBinaryPath" "RelIconPath" "SymlinkName" "WMClass"
+update_status() {
+  echo "$2" > "$1"
+}
+
+# --- GENERIC HELPER: Install with Live Progress ---
 install_tar_app() {
-  local APP_NAME="$1"
-  local DOWNLOAD_URL="$2"
-  local INSTALL_DIR="$3"
-  local BIN_REL="$4"    # Path to binary inside install dir
-  local ICON_REL="$5"   # Path to icon inside install dir
-  local SYM_NAME="$6"   # Name for /usr/local/bin/<name>
-  local WM_CLASS="$7"   # (Optional) StartupWMClass for desktop file
+  local STATUS_FILE="$1"
+  local APP_NAME="$2"
+  local DOWNLOAD_URL="$3"
+  local INSTALL_DIR="$4"
+  local BIN_REL="$5"
+  local ICON_REL="$6"
+  local SYM_NAME="$7"
+  local WM_CLASS="$8"
 
-  echo "  -> [$APP_NAME] Starting installation..."
+  update_status "$STATUS_FILE" "Initializing $APP_NAME..."
 
-  # Check if already exists
   if [ -d "$INSTALL_DIR" ]; then
-      echo "  -> [$APP_NAME] Removing previous installation..."
       sudo rm -rf "$INSTALL_DIR"
   fi
   sudo mkdir -p "$INSTALL_DIR"
 
-  # Download
   local TEMP_TAR=$(mktemp)
-  echo "  -> [$APP_NAME] Downloading..."
-  # -sS = Silent but show errors
-  if ! curl -L "$DOWNLOAD_URL" -o "$TEMP_TAR" -sS; then
-      echo "Error: [$APP_NAME] Download failed."
-      rm -f "$TEMP_TAR"
-      return 1
+
+  # --- THE FIX: Unbuffered Curl Loop ---
+  # 1. curl -N disables output buffering.
+  # 2. We read character-by-character until we hit a carriage return (\r).
+  # 3. We extract the first column (Percentage) using bash substring.
+
+  update_status "$STATUS_FILE" "Starting Download..."
+
+  if ! curl -N -L "$DOWNLOAD_URL" -o "$TEMP_TAR" 2>&1 | \
+     while IFS= read -r -d $'\r' line; do
+        # Extract first 3 characters (The percentage column)
+        # e.g. " 12" or "100"
+        PCT="${line:0:4}"
+        # Only update if it looks like a number
+        if [[ "$PCT" =~ [0-9] ]]; then
+            update_status "$STATUS_FILE" "Downloading $APP_NAME: ${PCT// /}%"
+        fi
+     done; then
+
+      # Double check if file exists and has size
+      if [ ! -s "$TEMP_TAR" ]; then
+          update_status "$STATUS_FILE" "Error: Download failed."
+          rm -f "$TEMP_TAR"
+          return 1
+      fi
   fi
 
-  # Extract
-  echo "  -> [$APP_NAME] Extracting..."
-  # --strip-components=1 removes the top-level folder inside the tarball
-  # so files go directly into INSTALL_DIR (e.g. /opt/Postman/Postman)
+  update_status "$STATUS_FILE" "Extracting $APP_NAME..."
   if ! sudo tar -xzf "$TEMP_TAR" -C "$INSTALL_DIR" --strip-components=1; then
-      echo "Error: [$APP_NAME] Extraction failed."
+      update_status "$STATUS_FILE" "Error: Extraction failed."
       rm -f "$TEMP_TAR"
       return 1
   fi
   rm -f "$TEMP_TAR"
 
-  # Symlink
-  echo "  -> [$APP_NAME] Creating symlink '$SYM_NAME'..."
+  update_status "$STATUS_FILE" "Linking $APP_NAME..."
   sudo ln -sf "$INSTALL_DIR/$BIN_REL" "/usr/local/bin/$SYM_NAME"
 
-  # Desktop Shortcut
-  echo "  -> [$APP_NAME] Creating desktop entry..."
   local DESKTOP_FILE="/usr/share/applications/$SYM_NAME.desktop"
   local ICON_PATH="$INSTALL_DIR/$ICON_REL"
-  
-  # Construct Desktop Entry content
+
   sudo bash -c "cat > $DESKTOP_FILE" <<EOF
 [Desktop Entry]
 Version=1.0
@@ -67,135 +85,143 @@ Terminal=false
 StartupWMClass=${WM_CLASS:-$SYM_NAME}
 EOF
 
-  echo "  -> [$APP_NAME] Installation complete."
+  update_status "$STATUS_FILE" "Installed $APP_NAME."
 }
 
-# --- WRAPPER: JetBrains Logic ---
-install_jetbrains() {
-  local APP_CODE="$1"
-  local APP_NAME="$2"
-  local CMD_NAME="$3"
+# --- THREAD: Heavy Apps (Sequential) ---
+install_heavy_apps_thread() {
+  update_status "$STAT_IDES" "Starting..."
 
-  # 1. Fetch Dynamic URL
-  echo "  -> [JetBrains] Fetching URL for $APP_NAME..."
-  if ! command -v jq &>/dev/null; then echo "Error: jq missing."; return 1; fi
-
-  local API="https://data.services.jetbrains.com/products/releases?code=${APP_CODE}&latest=true&type=release"
-  local URL=$(curl -s "$API" | jq -r ".${APP_CODE}[0].downloads.linux.link")
-
-  if [[ -z "$URL" || "$URL" == "null" ]]; then
-    echo "Error: Could not resolve URL for $APP_NAME"
+  if ! command -v jq &>/dev/null; then
+    update_status "$STAT_IDES" "Error: jq missing."
     return 1
   fi
 
-  # 2. Call Generic Helper
-  # Structure: /opt/jetbrains/webstorm/bin/webstorm.sh
-  install_tar_app \
-    "$APP_NAME" \
-    "$URL" \
-    "/opt/jetbrains/$CMD_NAME" \
-    "bin/$CMD_NAME.sh" \
-    "bin/$CMD_NAME.svg" \
-    "$CMD_NAME" \
-    "jetbrains-$CMD_NAME"
-}
+  # 1. WEBSTORM
+  update_status "$STAT_IDES" "Finding WebStorm URL..."
+  local URL_WS=$(curl -s "https://data.services.jetbrains.com/products/releases?code=WS&latest=true&type=release" | jq -r ".WS[0].downloads.linux.link")
 
-# --- WRAPPER: Postman Logic ---
-install_postman() {
-  # Postman has a static URL, so we just pass data to the helper
-  # Structure: /opt/Postman/Postman (binary)
-  # Icon: /opt/Postman/app/resources/app/assets/icon.png
-  
-  install_tar_app \
-    "Postman" \
+  if [[ -n "$URL_WS" && "$URL_WS" != "null" ]]; then
+    install_tar_app "$STAT_IDES" "WebStorm" "$URL_WS" "/opt/jetbrains/webstorm" \
+      "bin/webstorm" "bin/webstorm.svg" "webstorm" "jetbrains-webstorm"
+  else
+    update_status "$STAT_IDES" "Error: WebStorm URL not found."
+  fi
+
+  # 2. DATAGRIP
+  update_status "$STAT_IDES" "Finding DataGrip URL..."
+  local URL_DG=$(curl -s "https://data.services.jetbrains.com/products/releases?code=DG&latest=true&type=release" | jq -r ".DG[0].downloads.linux.link")
+
+  if [[ -n "$URL_DG" && "$URL_DG" != "null" ]]; then
+    install_tar_app "$STAT_IDES" "DataGrip" "$URL_DG" "/opt/jetbrains/datagrip" \
+      "bin/datagrip" "bin/datagrip.svg" "datagrip" "jetbrains-datagrip"
+  else
+    update_status "$STAT_IDES" "Error: DataGrip URL not found."
+  fi
+
+  # 3. POSTMAN
+  install_tar_app "$STAT_IDES" "Postman" \
     "https://dl.pstmn.io/download/latest/linux64" \
-    "/opt/Postman" \
-    "Postman" \
-    "app/resources/app/assets/icon.png" \
-    "postman" \
-    "Postman"
+    "/opt/Postman" "Postman" "app/resources/app/assets/icon.png" "postman" "Postman"
+
+  update_status "$STAT_IDES" "All Apps Installed."
 }
 
+# --- MAIN FUNCTION ---
 install_devtools() {
   print_title "Installing Development Tools"
 
   local REAL_USER="${SUDO_USER:-$USER}"
-  
-  # Log files
   local LOG_DNF="/tmp/devtools_dnf.log"
   local LOG_FLATPAK="/tmp/devtools_flatpak.log"
-  local LOG_JETBRAINS="/tmp/devtools_jetbrains.log"
-  local LOG_POSTMAN="/tmp/devtools_postman.log"
 
-  # --- 1. Pre-requisites ---
+  # Initialize status
+  echo "Waiting..." > "$STAT_DNF"
+  echo "Waiting..." > "$STAT_FLATPAK"
+  echo "Waiting..." > "$STAT_IDES"
+
+  # 1. Pre-requisites
   if ! command -v jq &>/dev/null; then
     info "Installing 'jq'..."
     sudo dnf install -y jq &>/dev/null
   fi
-  # Clean up conflicts
+
   sudo dnf remove -y docker docker-client docker-common podman-docker &>/dev/null
 
-  # --- 2. Package Lists ---
-  local DNF_PACKAGES=(
-    "@Development Tools" "code" "neovim"
-    "docker-ce" "docker-ce-cli" "containerd.io" "docker-buildx-plugin" "docker-compose-plugin"
-  )
-  local FLATPAK_PACKAGES=("dev.zed.Zed")
+  # 2. Start Parallel Threads
+  print_title "Starting Installation"
 
-  # --- 3. Quad-Parallel Installation ---
-  print_title "Starting Quad-Parallel Installation"
-  echo "  1. DNF (System Utils)       -> $LOG_DNF"
-  echo "  2. Flatpak (Zed)            -> $LOG_FLATPAK"
-  echo "  3. JetBrains (WS, DG)       -> $LOG_JETBRAINS"
-  echo "  4. Postman (Native)         -> $LOG_POSTMAN"
-
-  # Thread A: DNF
-  ( sudo dnf install -y --skip-unavailable "${DNF_PACKAGES[@]}" > "$LOG_DNF" 2>&1 ) & PID_DNF=$!
-
-  # Thread B: Flatpak
-  ( flatpak install -y flathub "${FLATPAK_PACKAGES[@]}" > "$LOG_FLATPAK" 2>&1 ) & PID_FLATPAK=$!
-
-  # Thread C: JetBrains (WebStorm & DataGrip)
+  # THREAD A: DNF
   (
-    {
-      install_jetbrains "WS" "WebStorm" "webstorm"
-      install_jetbrains "DG" "DataGrip" "datagrip"
-    } > "$LOG_JETBRAINS" 2>&1
-  ) & PID_JETBRAINS=$!
+    update_status "$STAT_DNF" "Running transaction..."
+    local DNF_PACKAGES=("@Development Tools" "code" "neovim" "docker-ce" "docker-ce-cli" "containerd.io" "docker-buildx-plugin" "docker-compose-plugin")
+    if sudo dnf install -y --skip-unavailable "${DNF_PACKAGES[@]}" > "$LOG_DNF" 2>&1; then
+       update_status "$STAT_DNF" "Done."
+    else
+       update_status "$STAT_DNF" "Error (See logs)."
+       exit 1
+    fi
+  ) & PID_DNF=$!
 
-  # Thread D: Postman
-  ( install_postman > "$LOG_POSTMAN" 2>&1 ) & PID_POSTMAN=$!
+  # THREAD B: Flatpak
+  (
+    update_status "$STAT_FLATPAK" "Installing flatpak apps..."
+    local FLATPAK_PACKAGES=(
+      "dev.zed.Zed"
+      "com.obsproject.Studio"
+      "com.mongodb.Compass"
+      "md.obsidian.Obsidian"
+    )
+    if flatpak install -y flathub "${FLATPAK_PACKAGES[@]}" > "$LOG_FLATPAK" 2>&1; then
+       update_status "$STAT_FLATPAK" "Done."
+    else
+       update_status "$STAT_FLATPAK" "Error (See logs)."
+       exit 1
+    fi
+  ) & PID_FLATPAK=$!
 
-  # --- 4. Wait & Report ---
-  info "Waiting for background tasks..."
-  
-  wait $PID_DNF
-  RESULT_DNF=$?
-  
-  wait $PID_FLATPAK
-  RESULT_FLATPAK=$?
-  
-  wait $PID_JETBRAINS
-  RESULT_JETBRAINS=$?
+  # THREAD C: IDEs & Tools (Sequential)
+  ( install_heavy_apps_thread ) & PID_IDES=$!
 
-  wait $PID_POSTMAN
-  RESULT_POSTMAN=$?
+  # 3. LIVE STATUS DASHBOARD
+  tput civis # Hide cursor
+  echo ""
+  echo "  [DNF]     ..."
+  echo "  [Flatpak] ..."
+  echo "  [IDEs]    ..."
 
-  [ $RESULT_DNF -eq 0 ]       && success "DNF installed."       || error "DNF failed (see $LOG_DNF)"
-  [ $RESULT_FLATPAK -eq 0 ]   && success "Flatpak installed."   || warn  "Flatpak failed (see $LOG_FLATPAK)"
-  [ $RESULT_JETBRAINS -eq 0 ] && success "JetBrains installed." || error "JetBrains failed (see $LOG_JETBRAINS)"
-  [ $RESULT_POSTMAN -eq 0 ]   && success "Postman installed."   || error "Postman failed (see $LOG_POSTMAN)"
+  while kill -0 $PID_DNF 2>/dev/null || \
+        kill -0 $PID_FLATPAK 2>/dev/null || \
+        kill -0 $PID_IDES 2>/dev/null; do
 
-  # --- 5. Post-Config ---
-  
-  # Docker Permissions
+    tput cuu 3
+
+    # Read status files directly
+    S_DNF=$(cat "$STAT_DNF")
+    S_FP=$(cat "$STAT_FLATPAK")
+    S_IDES=$(cat "$STAT_IDES")
+
+    # \033[K clears the line to the right to prevent ghost text
+    echo -e "  [DNF]     ${S_DNF}\033[K"
+    echo -e "  [Flatpak] ${S_FP}\033[K"
+    echo -e "  [IDEs]    ${S_IDES}\033[K"
+
+    sleep 0.2
+  done
+
+  tput cnorm # Restore cursor
+  echo ""
+
+  # 4. Final Wait
+  wait $PID_DNF;     [ $? -eq 0 ] && success "DNF finished."     || error "DNF failed."
+  wait $PID_FLATPAK; [ $? -eq 0 ] && success "Flatpak finished." || warn  "Flatpak failed."
+  wait $PID_IDES;    [ $? -eq 0 ] && success "IDEs finished."    || error "IDEs failed."
+
+  # 5. Post-Config
   sudo systemctl enable --now docker
   sudo groupadd -f docker
-  if sudo usermod -aG docker "$REAL_USER"; then
-     success "User '$REAL_USER' added to Docker group."
-  fi
-  
-  # OpenCode CLI
+  sudo usermod -aG docker "$REAL_USER"
+
   if ! command -v opencode &>/dev/null; then
     info "Installing OpenCode CLI..."
     sudo -u "$REAL_USER" sh -c "curl -fsSL https://opencode.ai/install | bash" &>/dev/null

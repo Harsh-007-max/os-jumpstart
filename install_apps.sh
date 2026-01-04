@@ -14,6 +14,7 @@ install_apps() {
     "spotify-client"
     "mpv"
     "discord"
+    "krita"
   )
   info "Installing ${#APPS[@]} desktop applications..."
   if sudo dnf install -y "${APPS[@]}"; then

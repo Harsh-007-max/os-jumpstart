@@ -13,13 +13,13 @@ REPO_MAP['base-utils']='sudo dnf install -y dnf-plugins-core'
 
 REPO_MAP['rpm-fusion']="sudo dnf install -y https://mirrors.rpmfusion.org/free/fedora/rpmfusion-free-release-$(rpm -E %fedora).noarch.rpm https://mirrors.rpmfusion.org/nonfree/fedora/rpmfusion-nonfree-release-$(rpm -E %fedora).noarch.rpm"
 
-REPO_MAP['brave-browser']="sudo dnf config-manager addrepo --from-repofile=https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo"
+REPO_MAP['brave-browser']="sudo dnf config-manager addrepo --from-repofile=https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo --overwrite"
 
 REPO_MAP['vscode']="sudo rpm --import https://packages.microsoft.com/keys/microsoft.asc && echo -e \"[code]\nname=Visual Studio Code\nbaseurl=https://packages.microsoft.com/yumrepos/vscode\nenabled=1\nautorefresh=1\ntype=rpm-md\ngpgcheck=1\ngpgkey=https://packages.microsoft.com/keys/microsoft.asc\" | sudo tee /etc/yum.repos.d/vscode.repo > /dev/null"
 
-REPO_MAP['spotify']="sudo dnf config-manager addrepo --from-repofile=https://negativo17.org/repos/fedora-spotify.repo"
+REPO_MAP['spotify']="sudo dnf config-manager addrepo --from-repofile=https://negativo17.org/repos/fedora-spotify.repo --overwrite"
 
-REPO_MAP['docker']="sudo dnf config-manager addrepo --from-repofile=https://download.docker.com/linux/fedora/docker-ce.repo"
+REPO_MAP['docker']="sudo dnf config-manager addrepo --from-repofile=https://download.docker.com/linux/fedora/docker-ce.repo --overwrite"
 
 REPO_MAP['lazygit']="sudo dnf copr enable -y dejan/lazygit"
 

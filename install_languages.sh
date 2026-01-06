@@ -46,24 +46,24 @@ setup_languages() {
     fi
   fi
 
-  info "Installing Node.js v22 via NVM for user '$REAL_USER'..."
+  info "Installing Node.js v20 via NVM for user '$REAL_USER'..."
   sudo -u "$REAL_USER" bash -c "
   export NVM_DIR='$NVM_DIR'
   [ -s \"\$NVM_DIR/nvm.sh\" ] && \. \"\$NVM_DIR/nvm.sh\"  # Load NVM
 
-  if nvm ls 22 &>/dev/null; then
-    echo 'Node v22 is already installed.'
+  if nvm ls 20 &>/dev/null; then
+    echo 'Node v20 is already installed.'
   else
-    echo 'Downloading Node v22...'
-    nvm install 22
-    nvm alias default 22
+    echo 'Downloading Node v20...'
+    nvm install 20
+    nvm alias default 20
     nvm use default
       fi
       "
       if [ $? -eq 0 ]; then
-        success "Node.js v22 installed successfully via NVM for user '$REAL_USER'."
+        success "Node.js v20 installed successfully via NVM for user '$REAL_USER'."
       else
-        error "Failed to install Node.js v22 via NVM for user '$REAL_USER'."
+        error "Failed to install Node.js v20 via NVM for user '$REAL_USER'."
         return 1
       fi
     }

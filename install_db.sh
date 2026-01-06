@@ -3,7 +3,6 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/shared_functions.sh"
 source "$SCRIPT_DIR/install_postgresql.sh"
-source "$SCRIPT_DIR/install_mongodb.sh"
 
 
 install_db() {
@@ -15,3 +14,7 @@ install_db() {
         install_postgresql
     fi
 }
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+    install_db
+fi

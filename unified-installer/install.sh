@@ -16,6 +16,7 @@ main() {
   declare -A scripts_to_run=(
     ["os-config.sh"]=true
     ["update_os.sh"]=true
+    ["install_shell.sh"]=true
   )
   for script in "${!scripts_to_run[@]}"; do
       local script_path="$SCRIPT_DIR/$script"

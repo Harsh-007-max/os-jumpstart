@@ -23,3 +23,7 @@ install_shell() {
             ;;
     esac
 }
+
+if [[ "${BASH_SOURCE[0]}" == "${0}" ]]; then
+  install_shell
+fi

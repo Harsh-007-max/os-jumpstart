@@ -50,12 +50,12 @@ get_base_distro() {
       success "[Success]: Mapped to base distro: $BASE_DISTRO"
 
       write_vars_to_file "$cache_file" \
-        "DISTRO_ID='$ID'" \
-        "BASE_DISTRO='$BASE_DISTRO'" \
-        "DISTRO_INFO='$DISTRO_INFO'" \
-        "AVAILABLE_PACKAGE_MANAGERS='$available_pkg_managers'" \
-        "DISTRO_DETECTED_AT='$(date +%s)'" \
-        "PRIMARY_PACKAGE_MANAGER='$primary_manager'"
+        "export DISTRO_ID='$ID'" \
+        "export BASE_DISTRO='$BASE_DISTRO'" \
+        "export DISTRO_INFO='$DISTRO_INFO'" \
+        "export AVAILABLE_PACKAGE_MANAGERS='$available_pkg_managers'" \
+        "export DISTRO_DETECTED_AT='$(date +%s)'" \
+        "export PRIMARY_PACKAGE_MANAGER='$primary_manager'"
 
       echo "$BASE_DISTRO"
       return 0

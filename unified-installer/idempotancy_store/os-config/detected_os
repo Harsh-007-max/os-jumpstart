@@ -1,0 +1,8 @@
+#!/bin/bash
+# Auto-generated file - Sun Jan 11 02:32:35 AM IST 2026
+DISTRO_ID='fedora'
+BASE_DISTRO='fedora'
+DISTRO_INFO='fedora '
+AVAILABLE_PACKAGE_MANAGERS='dnf yum rpm flatpak tar'
+DISTRO_DETECTED_AT='1768078955'
+PRIMARY_PACKAGE_MANAGER='dnf'
